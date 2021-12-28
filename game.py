@@ -6,8 +6,7 @@ WIDTH = 1000
 HEIGHT = 600
 PLAYER_SPEED = 4
 
-playing = True
-game_over = False
+game_state = 'playing'
 lives_count = 3
 hedge_speed = 4
 score = 0
@@ -26,14 +25,21 @@ music.play('theme')
 music.set_volume(0.05)
 
 def draw():
-    global score
+    global score, game_state
     
     screen.fill('light blue')
+
+    if game_state == 'life_lost':
+        screen.draw.text('Oops!', midtop=(WIDTH / 2, 50), fontsize=60)
+
+    if game_state == 'game_over':
+        screen.draw.text('Game over!', midtop=(WIDTH / 2, HEIGHT / 2), fontsize=60)
 
     fox.draw()
     coin.draw()
     hedge.draw()
     lives.draw()
+
 
     show_score(score)
 
@@ -55,7 +61,10 @@ def show_score(score):
     screen.draw.text(result, topleft=(10, 10), fontsize = 60)
 
 def handle_navigation():
-    if keyboard.rctrl or keyboard.lctrl:
+    if game_state != 'playing':
+        return
+
+    if keyboard.rshift or keyboard.lshift:
         speed = PLAYER_SPEED * 2
     else:
         speed = PLAYER_SPEED
@@ -85,9 +94,9 @@ def handle_navigation():
         fox.y = HEIGHT + 41.5
 
 def move_hedge():
-    global hedge_speed
+    global hedge_speed, game_state
     
-    if not playing:
+    if game_state != 'playing':
         return
 
     hedge.x = hedge.x - hedge_speed
@@ -97,7 +106,16 @@ def move_hedge():
         hedge_speed = randint(10, 20)
 
 def life_lost():
+    global game_state
     lives.image = str(lives_count) + '_lives'
+
+    if lives_count > 0:
+        game_state = 'life_lost'
+        sounds.oops.play()
+        clock.schedule(start_over, 0.3)
+    else:
+        game_state = 'game_over'
+        sounds.game_over.play()
 
 def update():
     global score
@@ -108,16 +126,21 @@ def update():
 
     handle_navigation()
 
-    if fox.colliderect(hedge) and playing:
-        playing = False
+    if fox.colliderect(hedge) and game_state == 'playing':
         lives_count = lives_count - 1
         life_lost()
+
 
     if fox.colliderect(coin):
         sounds.coin.play()
         score = score + 1
         show_score(score)
         place_coin() 
+
+def start_over():
+    global game_state
+    hedge.x = WIDTH + 27.5
+    game_state = 'playing'
 
 place_coin()
 
